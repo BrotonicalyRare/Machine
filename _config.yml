@@ -1,0 +1,30 @@
+# Jekyll configuration for GitHub Pages
+title: "Video Tube"
+description: "A responsive video browsing platform"
+
+# GitHub Pages specific settings
+plugins:
+  - jekyll-relative-links
+
+# Markdown settings
+markdown: kramdown
+highlighter: rouge
+
+# Include/exclude files
+include:
+  - "*.html"
+  - "*.css"
+  - "*.js"
+  - "*.json"
+
+exclude:
+  - "*.php"
+  - "*.csv"
+  - vendor/
+  - Gemfile
+  - Gemfile.lock
+
+# Relative links settings
+relative_links:
+  enabled: true
+  collections: false

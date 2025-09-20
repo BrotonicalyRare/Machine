@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Watch Video - Video Tube</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="database.js"></script>
+</head>
+<body>
+  <div class="watch-container">
+    <!-- Header -->
+    <header class="watch-header">
+      <h1><a href="index.html">← Video Tube</a></h1>
+    </header>
+
+    <!-- Video Player Section -->
+    <div class="video-player-section">
+      <div class="video-player">
+        <iframe id="video-iframe" src="" frameborder="0" allowfullscreen></iframe>
+      </div>
+      
+      <div class="video-details">
+        <h2 id="video-title">Loading...</h2>
+        <div class="video-meta">
+          <span id="video-tag" class="tag-badge"></span>
+        </div>
+        <p id="video-description">Loading description...</p>
+      </div>
+    </div>
+
+    <!-- Related Videos Section -->
+    <div class="related-videos-section">
+      <h3>Related Videos</h3>
+      <div id="related-videos" class="related-videos-grid">
+        <!-- Related videos will be loaded here -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentVideo = null;
+    let allVideos = [];
+    let currentVideoIndex = 0;
+
+    // Function to extract YouTube video ID from URL
+    function getYouTubeVideoId(url) {
+      const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+      const match = url.match(regExp);
+      return (match && match[2].length === 11) ? match[2] : null;
+    }
+    
+    // Function to get YouTube thumbnail URL
+    function getYouTubeThumbnail(url) {
+      const videoId = getYouTubeVideoId(url);
+      if (videoId) {
+        return `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
+      }
+      return 'https://via.placeholder.com/320x180/1976d2/white?text=Video+Thumbnail';
+    }
+
+    // Load video data from sessionStorage or database
+    async function loadVideoData() {
+      const videoIndex = sessionStorage.getItem('currentVideoIndex');
+      let videosData = sessionStorage.getItem('videosData');
+      
+      if (videoIndex !== null && videosData) {
+        // Use session data first
+        currentVideoIndex = parseInt(videoIndex);
+        allVideos = JSON.parse(videosData);
+        currentVideo = allVideos[currentVideoIndex];
+        
+        displayCurrentVideo();
+        displayRelatedVideos();
+      } else {
+        // Try to load from database
+        try {
+          if (!videoDB.isInitialized) {
+            await videoDB.init();
+          }
+          
+          allVideos = videoDB.getAllVideos();
+          if (allVideos.length > 0) {
+            currentVideoIndex = 0;
+            currentVideo = allVideos[0];
+            displayCurrentVideo();
+            displayRelatedVideos();
+          } else {
+            // Fallback to redirect
+            window.location.href = 'index.html';
+          }
+        } catch (error) {
+          console.error('Failed to load video data:', error);
+          window.location.href = 'index.html';
+        }
+      }
+    }
+
+    // Display the current video
+    function displayCurrentVideo() {
+      if (!currentVideo) return;
+      
+      document.getElementById('video-iframe').src = currentVideo.src;
+      document.getElementById('video-title').textContent = currentVideo.name;
+      document.getElementById('video-description').textContent = currentVideo.desc;
+      document.getElementById('video-tag').textContent = currentVideo.tag;
+      
+      // Update page title
+      document.title = `${currentVideo.name} - Video Tube`;
+    }
+
+    // Display related videos (same tag or random if not enough)
+    function displayRelatedVideos() {
+      const relatedContainer = document.getElementById('related-videos');
+      relatedContainer.innerHTML = '';
+      
+      // Get videos with same tag, excluding current video
+      let relatedVideos = allVideos.filter((video, index) => 
+        index !== currentVideoIndex && video.tag === currentVideo.tag
+      );
+      
+      // If not enough related videos, add random ones
+      if (relatedVideos.length < 4) {
+        const remainingVideos = allVideos.filter((video, index) => 
+          index !== currentVideoIndex && video.tag !== currentVideo.tag
+        );
+        relatedVideos = relatedVideos.concat(remainingVideos.slice(0, 4 - relatedVideos.length));
+      }
+      
+      // Limit to 6 related videos
+      relatedVideos = relatedVideos.slice(0, 6);
+      
+      relatedVideos.forEach((video, index) => {
+        const videoIndex = allVideos.findIndex(v => v === video);
+        const div = document.createElement('div');
+        div.className = 'related-video-card';
+        div.onclick = () => switchToVideo(videoIndex);
+        
+        // Use custom thumbnail if available, otherwise get YouTube thumbnail
+        let thumbnailUrl = video.thumbnail || '';
+        if (!thumbnailUrl) {
+          thumbnailUrl = getYouTubeThumbnail(video.src);
+        }
+        
+        div.innerHTML = `
+          <div class="related-thumbnail">
+            <img src="${thumbnailUrl}" alt="${video.name}">
+            <div class="play-overlay-small">
+              <div class="play-button-small">▶</div>
+            </div>
+          </div>
+          <div class="related-info">
+            <h4>${video.name}</h4>
+            <p>${video.desc.length > 80 ? video.desc.substring(0, 80) + '...' : video.desc}</p>
+            <span class="tag-small">${video.tag}</span>
+          </div>
+        `;
+        
+        relatedContainer.appendChild(div);
+      });
+    }
+
+    // Switch to a different video
+    function switchToVideo(videoIndex) {
+      currentVideoIndex = videoIndex;
+      currentVideo = allVideos[videoIndex];
+      
+      // Update sessionStorage
+      sessionStorage.setItem('currentVideoIndex', videoIndex);
+      
+      displayCurrentVideo();
+      displayRelatedVideos();
+      
+      // Scroll to top
+      window.scrollTo(0, 0);
+    }
+
+    // Load video on page load
+    window.onload = loadVideoData;
+  </script>
+</body>
+</html>

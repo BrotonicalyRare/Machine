@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Login - Video Tube</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>Admin Login</h1>
+  
+  <div id="auth">
+    <form id="login-form">
+      <input type="password" id="password" placeholder="Enter Password" required>
+      <button type="submit">Login</button>
+    </form>
+    <p style="text-align:center;margin-top:15px;"><a href="index.html">← Back to Videos</a></p>
+  </div>
+
+  <script>
+    // Secure password hash (SHA-256)
+    const ADMIN_PASS_HASH = "de7872df1b7b6064a4b702711e22c46df6d284a3795f5911e6adb3839c8075de";
+    
+    // Function to generate SHA-256 hash
+    async function sha256(message) {
+      const msgBuffer = new TextEncoder().encode(message);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      return hashHex;
+    }
+    
+    document.getElementById('login-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const password = document.getElementById('password').value;
+      const passwordHash = await sha256(password);
+      
+      if (passwordHash === ADMIN_PASS_HASH) {
+        // Store login status in localStorage with additional security
+        const loginToken = await sha256(password + Date.now().toString());
+        localStorage.setItem('adminLoggedIn', 'true');
+        localStorage.setItem('loginTime', Date.now().toString());
+        localStorage.setItem('loginToken', loginToken);
+        
+        alert('Login successful!');
+        window.location.href = 'admin.html';
+      } else {
+        alert('Wrong password!');
+        document.getElementById('password').value = '';
+      }
+    });
+    
+    // Check if already logged in
+    window.onload = function() {
+      const loggedIn = localStorage.getItem('adminLoggedIn');
+      const loginTime = localStorage.getItem('loginTime');
+      
+      // Check if logged in and session is still valid (24 hours)
+      if (loggedIn === 'true' && loginTime) {
+        const now = Date.now();
+        const twentyFourHours = 24 * 60 * 60 * 1000;
+        
+        if (now - parseInt(loginTime) < twentyFourHours) {
+          window.location.href = 'admin.html';
+        } else {
+          // Session expired, clear storage
+          localStorage.removeItem('adminLoggedIn');
+          localStorage.removeItem('loginTime');
+        }
+      }
+    };
+  </script>
+</body>
+</html>

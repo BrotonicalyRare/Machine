@@ -1,0 +1,40 @@
+{
+  "videos": [
+    {
+      "name": "Sample Boxing Video",
+      "desc": "A great boxing match",
+      "tag": "boxing",
+      "src": "https://www.youtube.com/embed/dQw4w9WgXcQ",
+      "thumbnail": null
+    },
+    {
+      "name": "Cooking Tutorial",
+      "desc": "Learn to cook pasta",
+      "tag": "cooking",
+      "src": "https://www.youtube.com/embed/dQw4w9WgXcQ",
+      "thumbnail": null
+    },
+    {
+      "name": "Football Highlights",
+      "desc": "Best goals of the season",
+      "tag": "sports",
+      "src": "https://www.youtube.com/embed/dQw4w9WgXcQ",
+      "thumbnail": null
+    },
+    {
+      "name": "Political Debate",
+      "desc": "Important political discussion",
+      "tag": "politics",
+      "src": "https://www.youtube.com/embed/dQw4w9WgXcQ",
+      "thumbnail": null
+    },
+    {
+      "name": "Daily Vlog",
+      "desc": "My day in the life",
+      "tag": "vlogs",
+      "src": "https://www.youtube.com/embed/dQw4w9WgXcQ",
+      "thumbnail": null
+    }
+  ],
+  "tags": ["boxing", "cooking", "politics", "sports", "vlogs"]
+}

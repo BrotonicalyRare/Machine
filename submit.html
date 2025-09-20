@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Submit Video - Video Tube</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header>
+      <div class="header-left">
+        <button class="menu-toggle" id="menu-toggle">☰</button>
+        <h1>Submit a Video</h1>
+      </div>
+    </header>
+
+    <div class="main-layout">
+      <!-- Main Content -->
+      <main class="main-content">
+        <div class="submission-page-container">
+          <div class="submission-form-wrapper">
+            <h2>Share Your Video</h2>
+            <p>Submit your video to be featured on our platform. After review, approved videos will be added to the collection.</p>
+            
+            <form id="submission-form" class="submission-form">
+              <div class="form-group">
+                <label for="submission-name">Your Name (optional)</label>
+                <input type="text" id="submission-name" placeholder="Enter your name" />
+              </div>
+              
+              <div class="form-group">
+                <label for="submission-title">Video Title *</label>
+                <input type="text" id="submission-title" placeholder="Enter video title" required />
+              </div>
+
+              <div class="form-group">
+                <label for="submission-url">Video URL *</label>
+                <input type="url" id="submission-url" placeholder="YouTube, Vimeo, or any video URL" required />
+                <small>Supported platforms: YouTube, Vimeo, and other embeddable video platforms</small>
+              </div>
+              
+              <!-- <div class="form-group">
+                <label for="submission-desc">Description (optional)</label>
+                <textarea id="submission-desc" placeholder="Describe your video (optional)"></textarea>
+              </div>
+              
+              <div class="form-group">
+                <label for="submission-tag">Category (optional)</label>
+                <input type="text" id="submission-tag" placeholder="e.g., cooking, sports, education" />
+              </div> -->
+              
+              <div class="form-actions">
+                <button type="button" class="btn-secondary" onclick="window.location.href='index.html'">
+                  ← Back to Videos
+                </button>
+                <button type="submit" class="btn-primary">
+                  Submit Video
+                </button>
+              </div>
+            </form>
+            
+            <div id="submission-status" class="submission-status"></div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    // Handle video submission form
+    document.getElementById('submission-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const title = document.getElementById('submission-title').value.trim();
+      const url = document.getElementById('submission-url').value.trim();
+      
+      if (!title || !url) {
+        showStatus('Please fill in all required fields.', 'error');
+        return;
+      }
+      
+      const submission = {
+        submitterName: document.getElementById('submission-name').value.trim() || 'Anonymous',
+        title: title,
+        description: document.getElementById('submission-desc').value.trim() || 'No description provided',
+        category: document.getElementById('submission-tag').value.trim().toLowerCase() || 'general',
+        url: url,
+        thumbnail: '', // No thumbnail field in simplified form
+        submittedAt: new Date().toISOString(),
+        id: Date.now().toString()
+      };
+
+      // Save to localStorage
+      const submissions = JSON.parse(localStorage.getItem('videoSubmissions') || '[]');
+      submissions.push(submission);
+      localStorage.setItem('videoSubmissions', JSON.stringify(submissions));
+
+      // Clear form
+      document.getElementById('submission-form').reset();
+      
+      // Show success message
+      showStatus('✅ Video submitted successfully! It will be reviewed by admin and added to the collection if approved.', 'success');
+      
+      // Redirect to main page after 3 seconds
+      setTimeout(() => {
+        window.location.href = 'index.html';
+      }, 3000);
+    });
+
+    function showStatus(message, type) {
+      const status = document.getElementById('submission-status');
+      status.innerHTML = `<p class="status-${type}">${message}</p>`;
+      
+      if (type !== 'success') {
+        setTimeout(() => {
+          status.innerHTML = '';
+        }, 5000);
+      }
+    }
+
+    // Mobile menu toggle (if needed)
+    document.addEventListener('DOMContentLoaded', function() {
+      const menuToggle = document.getElementById('menu-toggle');
+      if (menuToggle) {
+        menuToggle.addEventListener('click', function() {
+          // Add mobile menu functionality if needed
+        });
+      }
+    });
+  </script>
+</body>
+</html>

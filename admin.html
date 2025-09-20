@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Submit Video - Video Tube Admin</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="database.js"></script>
+</head>
+<body>
+  <h1>Submit Video</h1>
+  
+  <div id="form-container">
+    <form id="video-form">
+      <input type="text" id="name" placeholder="Video Name" required>
+      <textarea id="desc" placeholder="Description" required></textarea>
+      <input type="text" id="tag" placeholder="Tag (e.g., boxing, cooking, sports)" required>
+      <input type="url" id="src" placeholder="Video URL (YouTube, Vimeo, MP4, or any embeddable video)" required>
+      <input type="url" id="thumbnail" placeholder="Thumbnail Image URL (optional - auto-generated for YouTube)">
+      <button type="submit">Add Video</button>
+    </form>
+    
+    <div id="video-preview" style="display:none; margin-top: 20px; padding: 15px; background: #f0f0f0; border-radius: 6px;">
+      <h3>Preview:</h3>
+      <div id="preview-content"></div>
+    </div>
+  </div>
+
+  <div id="status-container">
+    <div id="status"></div>
+  </div>
+
+  <div id="video-list-container">
+    <h2>Current Videos</h2>
+    <div id="video-list"></div>
+  </div>
+
+  <div id="submissions-container" style="margin-top: 30px; padding: 20px; background: #fff3cd; border-radius: 8px; border: 1px solid #ffeaa7;">
+    <h2>Video Submissions <span id="submission-count" style="background: #ff6b6b; color: white; padding: 2px 8px; border-radius: 12px; font-size: 14px;">0</span></h2>
+    <div id="submissions-list"></div>
+  </div>
+
+  <div id="github-config" style="margin-top: 30px; padding: 20px; background: #f9f9f9; border-radius: 8px;">
+    <h3>GitHub Configuration</h3>
+    <div style="margin-bottom: 15px;">
+      <label for="github-token">Personal Access Token:</label>
+      <input type="password" id="github-token" placeholder="Enter your GitHub Personal Access Token" style="width: 100%; margin-top: 5px;">
+    </div>
+    <div style="margin-bottom: 15px;">
+      <label for="github-repo">Repository (owner/repo):</label>
+      <input type="text" id="github-repo" placeholder="e.g., username/video-tube" style="width: 100%; margin-top: 5px;">
+    </div>
+    <div style="margin-bottom: 15px;">
+      <label for="github-branch">Branch:</label>
+      <input type="text" id="github-branch" value="main" style="width: 100%; margin-top: 5px;">
+    </div>
+    <button onclick="saveGitHubConfig()" style="background: #28a745; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;">Save Configuration</button>
+    <button onclick="testGitHubConnection()" style="background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin-left: 10px;">Test Connection</button>
+  </div>
+
+  <div style="margin-top: 20px; text-align: center;">
+    <a href="index.html" style="color: #1976d2; text-decoration: none;">← Back to Videos</a> |
+    <a href="javascript:void(0)" onclick="logout()" style="color: #d32f2f; text-decoration: none;">Logout</a>
+  </div>
+
+  <script>
+    let videoDB;
+    let videosData = { videos: [], tags: [] };
+    
+    // Initialize when page loads
+    window.onload = async function() {
+      // Check if user is logged in
+      const loggedIn = localStorage.getItem('adminLoggedIn');
+      const loginTime = localStorage.getItem('loginTime');
+      
+      if (!loggedIn || loggedIn !== 'true') {
+        window.location.href = 'login.html';
+        return;
+      }
+      
+      // Check if session is still valid (24 hours)
+      if (loginTime) {
+        const now = Date.now();
+        const twentyFourHours = 24 * 60 * 60 * 1000;
+        
+        if (now - parseInt(loginTime) > twentyFourHours) {
+          // Session expired
+          localStorage.removeItem('adminLoggedIn');
+          localStorage.removeItem('loginTime');
+          localStorage.removeItem('loginToken');
+          window.location.href = 'login.html';
+          return;
+        }
+      }
+      
+      // Initialize database
+      videoDB = new VideoDatabase();
+      await videoDB.init();
+      
+      // Load GitHub configuration
+      loadGitHubConfig();
+      
+      // Load videos
+      await loadVideos();
+      
+      // Load submissions
+      loadSubmissions();
+    };
+
+    // Load and display video submissions
+    function loadSubmissions() {
+      const submissions = JSON.parse(localStorage.getItem('videoSubmissions') || '[]');
+      const container = document.getElementById('submissions-list');
+      const countBadge = document.getElementById('submission-count');
+      
+      countBadge.textContent = submissions.length;
+      container.innerHTML = '';
+      
+      if (submissions.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: #666; margin: 20px 0;">No submissions yet.</p>';
+        return;
+      }
+      
+      submissions.forEach((submission, index) => {
+        const div = document.createElement('div');
+        div.style.cssText = 'margin: 15px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px; background: white; position: relative;';
+        
+        const submittedDate = new Date(submission.submittedAt).toLocaleDateString();
+        
+        div.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 15px;">
+            <div style="flex: 1;">
+              <h4 style="margin: 0 0 8px 0; color: #1976d2;">${submission.title}</h4>
+              <p style="margin: 0 0 8px 0; color: #666; font-size: 14px;">${submission.description}</p>
+              <div style="margin-bottom: 8px;">
+                <span style="background: #e3f2fd; color: #1976d2; padding: 2px 8px; border-radius: 12px; font-size: 12px; margin-right: 8px;">${submission.category}</span>
+                ${submission.submitterName ? `<span style="color: #666; font-size: 12px;">by ${submission.submitterName}</span>` : ''}
+                <span style="color: #999; font-size: 12px; margin-left: 8px;">• ${submittedDate}</span>
+              </div>
+              <div style="font-size: 12px; color: #666;">
+                <strong>URL:</strong> <a href="${submission.url}" target="_blank" style="color: #1976d2;">${submission.url}</a>
+                ${submission.thumbnail ? `<br><strong>Thumbnail:</strong> <a href="${submission.thumbnail}" target="_blank" style="color: #1976d2;">Custom thumbnail provided</a>` : ''}
+              </div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <button onclick="approveSubmission(${index})" style="background: #4caf50; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 12px;">✓ Approve</button>
+              <button onclick="rejectSubmission(${index})" style="background: #f44336; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 12px;">✗ Reject</button>
+            </div>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    // Approve submission - add to videos
+    async function approveSubmission(index) {
+      const submissions = JSON.parse(localStorage.getItem('videoSubmissions') || '[]');
+      const submission = submissions[index];
+      
+      if (!submission) return;
+      
+      // Convert submission to video format
+      let embedSrc = submission.url;
+      if (submission.url.includes('youtube.com/watch?v=')) {
+        const videoId = submission.url.split('v=')[1].split('&')[0];
+        embedSrc = `https://www.youtube.com/embed/${videoId}`;
+      } else if (submission.url.includes('youtu.be/')) {
+        const videoId = submission.url.split('youtu.be/')[1].split('?')[0];
+        embedSrc = `https://www.youtube.com/embed/${videoId}`;
+      }
+      
+      try {
+        if (videoDB && videoDB.isInitialized) {
+          // Add to database
+          const success = videoDB.addVideo(
+            submission.title,
+            submission.description,
+            submission.category,
+            embedSrc,
+            submission.thumbnail || null
+          );
+          
+          if (success) {
+            // Remove from submissions
+            submissions.splice(index, 1);
+            localStorage.setItem('videoSubmissions', JSON.stringify(submissions));
+            
+            setStatus('Submission approved and video added!');
+            await loadVideos();
+            loadSubmissions();
+          } else {
+            setStatus('Failed to approve submission');
+          }
+        } else {
+          setStatus('Database not available');
+        }
+      } catch (error) {
+        console.error('Error approving submission:', error);
+        setStatus('Error approving submission');
+      }
+    }
+
+    // Reject submission - remove from list
+    function rejectSubmission(index) {
+      if (!confirm('Are you sure you want to reject this submission?')) return;
+      
+      const submissions = JSON.parse(localStorage.getItem('videoSubmissions') || '[]');
+      submissions.splice(index, 1);
+      localStorage.setItem('videoSubmissions', JSON.stringify(submissions));
+      
+      setStatus('Submission rejected and removed');
+      loadSubmissions();
+    }
+
+    // Load GitHub configuration into form
+    function loadGitHubConfig() {
+      const token = localStorage.getItem('github_token');
+      const repo = localStorage.getItem('github_repo');
+      const branch = localStorage.getItem('github_branch') || 'main';
+      
+      if (token) document.getElementById('github-token').value = token;
+      if (repo) document.getElementById('github-repo').value = repo;
+      document.getElementById('github-branch').value = branch;
+      
+      // Configure database with GitHub settings
+      if (videoDB && token && repo) {
+        videoDB.configureGitHub(token, repo, branch);
+      }
+    }
+
+    // Save GitHub configuration
+    function saveGitHubConfig() {
+      const token = document.getElementById('github-token').value.trim();
+      const repo = document.getElementById('github-repo').value.trim();
+      const branch = document.getElementById('github-branch').value.trim() || 'main';
+      
+      if (!token || !repo) {
+        alert('Please provide both GitHub token and repository');
+        return;
+      }
+      
+      // Save to localStorage
+      localStorage.setItem('github_token', token);
+      localStorage.setItem('github_repo', repo);
+      localStorage.setItem('github_branch', branch);
+      
+      // Configure database
+      if (videoDB) {
+        videoDB.configureGitHub(token, repo, branch);
+      }
+      
+      setStatus('GitHub configuration saved!');
+    }
+
+    // Test GitHub connection
+    async function testGitHubConnection() {
+      if (!videoDB || !videoDB.githubToken) {
+        alert('Please save GitHub configuration first');
+        return;
+      }
+      
+      setStatus('Testing GitHub connection...');
+      const success = await videoDB.testGitHubConnection();
+      
+      if (success) {
+        setStatus('GitHub connection successful!');
+      } else {
+        setStatus('GitHub connection failed. Check your configuration.');
+      }
+    }
+
+    // Load videos from database or JSON fallback
+    async function loadVideos() {
+      try {
+        if (videoDB && videoDB.isInitialized) {
+          // Load from database
+          const videos = videoDB.getAllVideos();
+          videosData.videos = videos;
+          updateTags();
+          setStatus(`Loaded ${videos.length} videos from database`);
+        } else {
+          // Fallback to JSON
+          const response = await fetch('videos.json');
+          const data = await response.json();
+          videosData = data;
+          setStatus(`Loaded ${data.videos.length} videos from JSON (database not available)`);
+        }
+        
+        displayCurrentVideos();
+      } catch (error) {
+        console.error('Error loading videos:', error);
+        setStatus('Error loading videos');
+      }
+    }
+
+    // Update tags from videos
+    function updateTags() {
+      const tags = [...new Set(videosData.videos.map(v => v.tag))];
+      videosData.tags = tags;
+    }
+
+    // Display current videos
+    function displayCurrentVideos() {
+      const container = document.getElementById('video-list');
+      container.innerHTML = '';
+      
+      videosData.videos.forEach((video, index) => {
+        const div = document.createElement('div');
+        div.style.cssText = 'margin: 10px 0; padding: 10px; border: 1px solid #ddd; border-radius: 4px; background: white;';
+        
+        // Use custom thumbnail if available, otherwise get YouTube thumbnail
+        let thumbnailSrc = video.thumbnail || '';
+        if (!thumbnailSrc && video.src && (video.src.includes('youtube.com') || video.src.includes('youtu.be'))) {
+          thumbnailSrc = videoDB?.getYoutubeThumbnail(video.src) || '';
+        }
+        
+        div.innerHTML = `
+          <div style="display: flex; gap: 15px; align-items: center;">
+            ${thumbnailSrc ? `<img src="${thumbnailSrc}" alt="Thumbnail" style="width: 120px; height: 90px; object-fit: cover; border-radius: 4px;">` : ''}
+            <div style="flex: 1;">
+              <h4 style="margin: 0 0 5px 0; color: #1976d2;">${video.name}</h4>
+              <p style="margin: 0 0 5px 0; color: #666; font-size: 14px;">${video.desc}</p>
+              <span style="background: #e3f2fd; color: #1976d2; padding: 2px 8px; border-radius: 12px; font-size: 12px;">${video.tag}</span>
+              ${video.thumbnail ? '<span style="background: #e8f5e8; color: #2e7d32; padding: 2px 8px; border-radius: 12px; font-size: 12px; margin-left: 5px;">Custom Thumbnail</span>' : ''}
+            </div>
+            <button onclick="deleteVideo(${index})" style="background: #d32f2f; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer;">Delete</button>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    // Delete video
+    async function deleteVideo(index) {
+      if (!confirm('Are you sure you want to delete this video?')) return;
+      
+      try {
+        if (videoDB && videoDB.isInitialized) {
+          // Delete from database
+          const video = videosData.videos[index];
+          const success = videoDB.deleteVideo(video.name, video.src);
+          if (success) {
+            setStatus('Video deleted and synced to GitHub!');
+            await loadVideos(); // Reload from database
+          } else {
+            setStatus('Failed to delete video');
+          }
+        } else {
+          // Delete from local array
+          videosData.videos.splice(index, 1);
+          updateTags();
+          displayCurrentVideos();
+          setStatus('Video deleted (database not available)');
+        }
+      } catch (error) {
+        console.error('Error deleting video:', error);
+        setStatus('Error deleting video');
+      }
+    }
+
+    // Set status message
+    function setStatus(message) {
+      const status = document.getElementById('status');
+      status.textContent = message;
+      status.style.cssText = 'margin: 10px 0; padding: 10px; background: #e3f2fd; color: #1976d2; border-radius: 4px; text-align: center;';
+      
+      // Clear status after 5 seconds
+      setTimeout(() => {
+        status.textContent = '';
+        status.style.display = 'none';
+      }, 5000);
+    }
+
+    // Handle logout
+    function logout() {
+      localStorage.removeItem('adminLoggedIn');
+      localStorage.removeItem('loginTime');
+      localStorage.removeItem('loginToken');
+      window.location.href = 'login.html';
+    }
+
+    // Handle form submission
+    document.addEventListener('DOMContentLoaded', function() {
+      document.getElementById('video-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const name = document.getElementById('name').value.trim();
+        const desc = document.getElementById('desc').value.trim();
+        const tag = document.getElementById('tag').value.trim().toLowerCase();
+        const src = document.getElementById('src').value.trim();
+        const thumbnail = document.getElementById('thumbnail').value.trim();
+        
+        // Validate YouTube URL and convert to embed if needed
+        let embedSrc = src;
+        if (src.includes('youtube.com/watch?v=')) {
+          const videoId = src.split('v=')[1].split('&')[0];
+          embedSrc = `https://www.youtube.com/embed/${videoId}`;
+        } else if (src.includes('youtu.be/')) {
+          const videoId = src.split('youtu.be/')[1].split('?')[0];
+          embedSrc = `https://www.youtube.com/embed/${videoId}`;
+        }
+        
+        try {
+          if (videoDB && videoDB.isInitialized) {
+            // Add to database with thumbnail
+            const success = videoDB.addVideo(name, desc, tag, embedSrc, thumbnail || null);
+            if (success) {
+              setStatus('Video added and synced to GitHub!');
+              await loadVideos(); // Reload from database
+              
+              // Show preview
+              const videoData = { name, desc: desc, tag, src: embedSrc, thumbnail: thumbnail || null };
+              showPreview(videoData);
+              
+              // Clear form
+              document.getElementById('video-form').reset();
+            } else {
+              setStatus('Failed to add video');
+            }
+          } else {
+            // Fallback: add to local array
+            const newVideo = { name, desc, tag, src: embedSrc, thumbnail: thumbnail || null };
+            videosData.videos.push(newVideo);
+            updateTags();
+            
+            showPreview(newVideo);
+            displayCurrentVideos();
+            document.getElementById('video-form').reset();
+            setStatus('Video added (database not available)');
+          }
+        } catch (error) {
+          console.error('Error adding video:', error);
+          setStatus('Error adding video');
+        }
+      });
+    });
+
+    // Show preview of added video
+    function showPreview(video) {
+      const preview = document.getElementById('video-preview');
+      const content = document.getElementById('preview-content');
+      
+      let thumbnailSrc = video.thumbnail || '';
+      
+      // If no custom thumbnail provided, try to get YouTube thumbnail
+      if (!thumbnailSrc && video.src && (video.src.includes('youtube.com') || video.src.includes('youtu.be'))) {
+        thumbnailSrc = videoDB?.getYoutubeThumbnail(video.src) || '';
+      }
+      
+      content.innerHTML = `
+        <div style="border: 1px solid #ddd; padding: 10px; border-radius: 4px;">
+          ${thumbnailSrc ? `<img src="${thumbnailSrc}" alt="Thumbnail" style="width: 100%; height: 200px; object-fit: cover; border-radius: 4px; margin-bottom: 10px;">` : ''}
+          <iframe src="${video.src}" width="100%" height="200" frameborder="0" allowfullscreen style="margin-bottom: 10px;"></iframe>
+          <h4>${video.name}</h4>
+          <p>${video.desc}</p>
+          <p><strong>Tag:</strong> ${video.tag}</p>
+          ${video.thumbnail ? `<p><strong>Custom Thumbnail:</strong> Yes</p>` : ''}
+        </div>
+      `;
+      
+      preview.style.display = 'block';
+    }
+  </script>
+</body>
+</html>

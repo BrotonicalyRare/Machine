@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Video Tube</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="database.js"></script>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header>
+      <div class="header-left">
+        <button class="menu-toggle" id="menu-toggle">☰</button>
+        <h1>My Video Tube</h1>
+      </div>
+    </header>
+
+    <div class="main-layout">
+      <!-- Sidebar Navigation -->
+      <nav class="sidebar" id="sidebar">
+        <h3>Categories</h3>
+        <ul id="category-links">
+          <!-- Dynamic category links will be generated here -->
+        </ul>
+      </nav>
+
+      <!-- Main Content -->
+      <main class="main-content">
+        <!-- Submit Video Button -->
+        <div class="submit-video-container">
+          <button id="submit-video-btn" class="submit-video-btn" onclick="window.location.href='submit.html'">
+            <span class="btn-icon">📹</span>
+            Submit a Video
+          </button>
+        </div>
+        
+        <div id="video-container"></div>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    let allVideos = [];
+    
+    // Function to extract YouTube video ID from URL
+    function getYouTubeVideoId(url) {
+      const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+      const match = url.match(regExp);
+      return (match && match[2].length === 11) ? match[2] : null;
+    }
+    
+    // Function to get YouTube thumbnail URL
+    function getYouTubeThumbnail(url) {
+      const videoId = getYouTubeVideoId(url);
+      if (videoId) {
+        return `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
+      }
+      return 'https://via.placeholder.com/320x180/1976d2/white?text=Video+Thumbnail';
+    }
+    
+    // Function to dynamically build the sidebar navigation
+    function buildNavbar(tags) {
+      const categoryLinks = document.getElementById("category-links");
+      categoryLinks.innerHTML = ""; // Clear existing content
+      
+      // Always add "All" link first
+      const allLi = document.createElement("li");
+      const allLink = document.createElement("a");
+      allLink.textContent = "All Videos";
+      allLink.href = "#";
+      allLink.className = "category-link active";
+      allLink.onclick = (e) => {
+        e.preventDefault();
+        filterVideos('all');
+        setActiveCategory(allLink);
+      };
+      allLi.appendChild(allLink);
+      categoryLinks.appendChild(allLi);
+      
+      // Add link for each unique tag
+      tags.forEach(tag => {
+        const li = document.createElement("li");
+        const link = document.createElement("a");
+        link.textContent = tag.charAt(0).toUpperCase() + tag.slice(1);
+        link.href = "#";
+        link.className = "category-link";
+        link.onclick = (e) => {
+          e.preventDefault();
+          filterVideos(tag);
+          setActiveCategory(link);
+        };
+        li.appendChild(link);
+        categoryLinks.appendChild(li);
+      });
+    }
+    
+    // Function to set active category
+    function setActiveCategory(activeLink) {
+      const allLinks = document.querySelectorAll('.category-link');
+      allLinks.forEach(link => link.classList.remove('active'));
+      activeLink.classList.add('active');
+    }
+
+    async function loadVideos() {
+      try {
+        // Initialize database
+        if (!videoDB.isInitialized) {
+          const initSuccess = await videoDB.init();
+          if (!initSuccess) {
+            throw new Error('Failed to initialize database');
+          }
+          
+          // Try to load from database first
+          let videos = videoDB.getAllVideos();
+          let tags = videoDB.getAllTags();
+          
+          // If no data in database, load from JSON and import
+          if (videos.length === 0) {
+            console.log('No data in database, importing from JSON...');
+            const res = await fetch("videos.json");
+            const jsonData = await res.json();
+            await videoDB.importFromJSON(jsonData);
+            
+            videos = videoDB.getAllVideos();
+            tags = videoDB.getAllTags();
+          }
+          
+          allVideos = videos;
+          buildNavbar(tags);
+          displayVideos(videos);
+        } else {
+          // Database already initialized, just load data
+          const videos = videoDB.getAllVideos();
+          const tags = videoDB.getAllTags();
+          
+          allVideos = videos;
+          buildNavbar(tags);
+          displayVideos(videos);
+        }
+      } catch (error) {
+        console.error('Error loading videos:', error);
+        // Fallback to JSON file
+        try {
+          const res = await fetch("videos.json");
+          const data = await res.json();
+          allVideos = data.videos;
+          buildNavbar(data.tags);
+          displayVideos(data.videos);
+        } catch (fallbackError) {
+          console.error('Fallback also failed:', fallbackError);
+          document.getElementById("video-container").innerHTML = '<p>Error loading videos. Please try again later.</p>';
+        }
+      }
+    }
+    
+    // Function to display videos as thumbnail grid
+    function displayVideos(videos) {
+      const container = document.getElementById("video-container");
+      container.innerHTML = "";
+
+      videos.forEach((video, index) => {
+        let div = document.createElement("div");
+        div.className = "video-card";
+        div.setAttribute("data-tag", video.tag);
+
+        // Use custom thumbnail if available, otherwise get YouTube thumbnail
+        let thumbnailUrl = video.thumbnail || '';
+        if (!thumbnailUrl) {
+          thumbnailUrl = getYouTubeThumbnail(video.src);
+        }
+        
+        div.innerHTML = `
+          <div class="thumbnail-container" onclick="openVideo(${index})">
+            <img src="${thumbnailUrl}" alt="${video.name}" class="video-thumbnail">
+            <div class="play-overlay">
+              <div class="play-button">▶</div>
+            </div>
+          </div>
+          <div class="video-info" onclick="openVideo(${index})">
+            <h3>${video.name}</h3>
+            <p class="video-description">${video.desc}</p>
+            <span class="video-tag">${video.tag}</span>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+    }
+    
+    // Function to open video in new page
+    function openVideo(index) {
+      // Store current video index and videos data in sessionStorage
+      sessionStorage.setItem('currentVideoIndex', index);
+      sessionStorage.setItem('videosData', JSON.stringify(allVideos));
+      
+      // Open video player page
+      window.open('watch.html', '_blank');
+    }
+
+    function filterVideos(tag) {
+      const videos = document.querySelectorAll(".video-card");
+      videos.forEach(v => {
+        if (tag === "all" || v.getAttribute("data-tag") === tag) {
+          v.style.display = "block";
+        } else {
+          v.style.display = "none";
+        }
+      });
+    }
+
+    window.onload = function() {
+      loadVideos();
+      
+      // Mobile menu toggle
+      const menuToggle = document.getElementById('menu-toggle');
+      const sidebar = document.getElementById('sidebar');
+      
+      menuToggle.addEventListener('click', function() {
+        sidebar.classList.toggle('open');
+      });
+      
+      // Close sidebar when clicking outside on mobile
+      document.addEventListener('click', function(e) {
+        if (window.innerWidth <= 768 && 
+            !sidebar.contains(e.target) && 
+            !menuToggle.contains(e.target)) {
+          sidebar.classList.remove('open');
+        }
+      });
+    };
+  </script>
+</body>
+</html>

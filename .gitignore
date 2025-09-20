@@ -1,0 +1,49 @@
+# Hide unnecessary documentation files
+DEPLOY.md
+DYNAMIC_SETUP.md
+example-custom-video.md
+LOCAL_DEV.md
+PASSWORD_SECURITY_UPDATE.md
+SUBMISSION_SYSTEM_COMPLETE.md
+SUBMIT_BUTTON_UPDATE.md
+VERIFICATION_COMPLETE.md
+
+# Keep: README.md (essential for users)
+
+# Hide backup files
+*_backup.*
+admin_backup.html
+admin-new.html
+
+# Hide old PHP files (no longer needed)
+*.php
+*.csv
+
+# Hide system files
+.DS_Store
+Thumbs.db
+
+# Hide editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Hide temporary files
+*.tmp
+*.temp
+
+# Hide log files
+*.log
+
+# Hide node modules (if any)
+node_modules/
+
+# Hide environment files
+.env
+.env.local
+.env.production
+
+# Hide build files
+dist/
+build/
