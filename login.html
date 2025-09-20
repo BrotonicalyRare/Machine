@@ -16,18 +16,17 @@
     <p style="text-align:center;margin-top:15px;"><a href="index.html">← Back to Videos</a></p>
   </div>
 
-  <!-- CryptoJS (SHA-256) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-
   <script>
     // Secure password hash (SHA-256)
     const ADMIN_PASS_HASH = "de7872df1b7b6064a4b702711e22c46df6d284a3795f5911e6adb3839c8075de";
     
-    // Function to generate SHA-256 hash using CryptoJS
-    // Return a Promise so existing await sha256(...) calls still work
-    function sha256(message) {
-      const hashHex = CryptoJS.SHA256(message).toString(CryptoJS.enc.Hex);
-      return Promise.resolve(hashHex);
+    // Function to generate SHA-256 hash
+    async function sha256(message) {
+      const msgBuffer = new TextEncoder().encode(message);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      return hashHex;
     }
     
     document.getElementById('login-form').addEventListener('submit', async function(e) {

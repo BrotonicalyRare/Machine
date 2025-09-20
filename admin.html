@@ -223,29 +223,56 @@
       
       // Configure database with GitHub settings
       if (videoDB && token && repo) {
-        videoDB.configureGitHub(token, repo, branch);
+        const repoParts = repo.split('/');
+        if (repoParts.length === 2) {
+          const owner = repoParts[0];
+          const repoName = repoParts[1];
+          videoDB.configureGitHub(owner, repoName, token);
+        }
       }
     }
 
     // Save GitHub configuration
     function saveGitHubConfig() {
+      console.log('saveGitHubConfig called');
+      
       const token = document.getElementById('github-token').value.trim();
       const repo = document.getElementById('github-repo').value.trim();
       const branch = document.getElementById('github-branch').value.trim() || 'main';
+      
+      console.log('Form values:', { token: token ? '***hidden***' : 'empty', repo, branch });
       
       if (!token || !repo) {
         alert('Please provide both GitHub token and repository');
         return;
       }
       
+      // Split repo into owner/repo parts
+      const repoParts = repo.split('/');
+      if (repoParts.length !== 2) {
+        alert('Repository should be in format: owner/repo (e.g., BrotonicalyRare/Machine)');
+        return;
+      }
+      
+      const owner = repoParts[0];
+      const repoName = repoParts[1];
+      
+      console.log('Parsed repo parts:', { owner, repoName });
+      
       // Save to localStorage
       localStorage.setItem('github_token', token);
       localStorage.setItem('github_repo', repo);
       localStorage.setItem('github_branch', branch);
       
-      // Configure database
+      console.log('Saved to localStorage');
+      
+      // Configure database (correct parameter order: owner, repo, token)
       if (videoDB) {
-        videoDB.configureGitHub(token, repo, branch);
+        console.log('Configuring videoDB with GitHub settings');
+        videoDB.configureGitHub(owner, repoName, token);
+        console.log('videoDB.githubConfig after configuration:', videoDB.githubConfig);
+      } else {
+        console.log('videoDB is not available');
       }
       
       setStatus('GitHub configuration saved!');
@@ -253,18 +280,45 @@
 
     // Test GitHub connection
     async function testGitHubConnection() {
-      if (!videoDB || !videoDB.githubToken) {
+      console.log('testGitHubConnection called');
+      console.log('videoDB:', videoDB);
+      console.log('videoDB.testGitHubConnection:', videoDB ? videoDB.testGitHubConnection : 'videoDB is null');
+      
+      if (!videoDB) {
+        console.log('videoDB is not initialized');
+        alert('Database not initialized');
+        return;
+      }
+      
+      if (typeof videoDB.testGitHubConnection !== 'function') {
+        console.log('testGitHubConnection method does not exist on videoDB');
+        alert('testGitHubConnection method not found');
+        return;
+      }
+      
+      console.log('videoDB.githubConfig:', videoDB.githubConfig);
+      
+      if (!videoDB.githubConfig || !videoDB.githubConfig.token) {
+        console.log('GitHub configuration missing');
         alert('Please save GitHub configuration first');
         return;
       }
       
       setStatus('Testing GitHub connection...');
-      const success = await videoDB.testGitHubConnection();
+      console.log('Calling videoDB.testGitHubConnection()');
       
-      if (success) {
-        setStatus('GitHub connection successful!');
-      } else {
-        setStatus('GitHub connection failed. Check your configuration.');
+      try {
+        const success = await videoDB.testGitHubConnection();
+        console.log('testGitHubConnection result:', success);
+        
+        if (success) {
+          setStatus('GitHub connection successful!');
+        } else {
+          setStatus('GitHub connection failed. Check your configuration.');
+        }
+      } catch (error) {
+        console.error('Error during testGitHubConnection:', error);
+        setStatus('Error testing GitHub connection: ' + error.message);
       }
     }
 

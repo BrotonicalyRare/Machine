@@ -4,6 +4,7 @@
  */
 class VideoDatabase {
     constructor() {
+        console.log('VideoDatabase constructor called');
         this.db = null;
         this.isInitialized = false;
         this.githubConfig = {
@@ -12,29 +13,39 @@ class VideoDatabase {
             token: null,
             branch: 'main'
         };
+        console.log('VideoDatabase constructor completed, githubConfig:', this.githubConfig);
     }
 
     /**
      * Initialize the database
      */
     async init() {
+        console.log('VideoDatabase init called');
         try {
             // Load SQL.js from CDN
             const SQL = await this.loadSQLJS();
+            console.log('SQL.js loaded successfully');
             
             // Try to load existing database from localStorage
             const savedDB = localStorage.getItem('videoDB');
             if (savedDB) {
                 const uint8Array = new Uint8Array(JSON.parse(savedDB));
                 this.db = new SQL.Database(uint8Array);
+                console.log('Loaded existing database from localStorage');
             } else {
                 // Create new database
                 this.db = new SQL.Database();
                 this.createTables();
+                console.log('Created new database');
             }
+            
+            // Load GitHub configuration from database
+            this.loadGitHubConfig();
+            console.log('Loaded GitHub config:', this.githubConfig);
             
             this.isInitialized = true;
             console.log('Database initialized successfully');
+            console.log('Available methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(this)));
             return true;
         } catch (error) {
             console.error('Failed to initialize database:', error);
@@ -337,9 +348,17 @@ class VideoDatabase {
      * Configure GitHub integration
      */
     configureGitHub(owner, repo, token) {
+        console.log('configureGitHub called with:', { owner, repo, token: token ? '***hidden***' : 'empty' });
+        
         this.githubConfig.owner = owner;
         this.githubConfig.repo = repo;
         this.githubConfig.token = token;
+        
+        console.log('Updated githubConfig:', { 
+            owner: this.githubConfig.owner, 
+            repo: this.githubConfig.repo, 
+            token: this.githubConfig.token ? '***hidden***' : 'empty' 
+        });
         
         // Save to database
         this.db.run('INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)', ['github_owner', owner]);
@@ -347,6 +366,7 @@ class VideoDatabase {
         this.db.run('INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)', ['github_token', token]);
         
         this.saveToStorage();
+        console.log('GitHub configuration saved to database and storage');
     }
 
     /**
@@ -447,6 +467,47 @@ class VideoDatabase {
         }
 
         return await updateResponse.json();
+    }
+
+    /**
+     * Test GitHub connection
+     */
+    async testGitHubConnection() {
+        console.log('database.js testGitHubConnection called');
+        console.log('Current githubConfig:', this.githubConfig);
+        
+        if (!this.githubConfig.owner || !this.githubConfig.repo || !this.githubConfig.token) {
+            console.log('GitHub configuration incomplete');
+            return false;
+        }
+
+        try {
+            const { owner, repo, token } = this.githubConfig;
+            console.log('Testing GitHub API with:', { owner, repo, token: '***hidden***' });
+            
+            const response = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
+                headers: {
+                    'Authorization': `token ${token}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                }
+            });
+
+            console.log('GitHub API response status:', response.status);
+            console.log('GitHub API response ok:', response.ok);
+            
+            if (response.ok) {
+                const repoData = await response.json();
+                console.log('Repository found:', repoData.full_name);
+            } else {
+                const errorText = await response.text();
+                console.log('GitHub API error:', errorText);
+            }
+
+            return response.ok;
+        } catch (error) {
+            console.error('GitHub connection test failed:', error);
+            return false;
+        }
     }
 
     /**
