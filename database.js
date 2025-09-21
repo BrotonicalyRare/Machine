@@ -479,7 +479,8 @@ class VideoDatabase {
                     name: v.name,
                     desc: v.desc,
                     tag: v.tag,
-                    src: v.src
+                    src: v.src,
+                    thumbnail: v.thumbnail
                 })),
                 tags: tags
             };
