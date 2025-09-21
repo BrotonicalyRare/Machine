@@ -44,6 +44,11 @@
     let allVideos = [];
     let currentVideoIndex = 0;
 
+    function getQueryParam(param) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get(param);
+    }
+
     // Function to extract YouTube video ID from URL
     function getYouTubeVideoId(url) {
       const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
@@ -62,53 +67,36 @@
 
     // Load video data from sessionStorage or database
     async function loadVideoData() {
-      console.log('loadVideoData called');
-      const videoIndex = sessionStorage.getItem('currentVideoIndex');
-      let videosData = sessionStorage.getItem('videosData');
-      
-      console.log('Session data:', { videoIndex, videosData: videosData ? 'exists' : 'null' });
-      
-      if (videoIndex !== null && videosData) {
-        // Use session data first
-        currentVideoIndex = parseInt(videoIndex);
-        allVideos = JSON.parse(videosData);
-        currentVideo = allVideos[currentVideoIndex];
-        
-        console.log('Using session data, video:', currentVideo);
-        displayCurrentVideo();
-        displayRelatedVideos();
-      } else {
-        // Try to load from database
-        try {
-          console.log('Loading from database...');
-          if (!videoDB.isInitialized) {
-            await videoDB.init();
-          }
-          
-          // Start periodic sync
-          if (videoDB.isInitialized) {
-            videoDB.startPeriodicSync();
-          }
-          
-          allVideos = videoDB.getAllVideos();
-          console.log('All videos from database:', allVideos);
-          
-          if (allVideos.length > 0) {
-            currentVideoIndex = 0;
-            currentVideo = allVideos[0];
-            console.log('Using first video from database:', currentVideo);
-            displayCurrentVideo();
-            displayRelatedVideos();
-          } else {
-            console.log('No videos found, redirecting to index');
-            // Fallback to redirect
-            window.location.href = 'index.html';
-          }
-        } catch (error) {
-          console.error('Failed to load video data:', error);
-          window.location.href = 'index.html';
-        }
+      const videoName = getQueryParam('video');
+
+      if (!videoDB.isInitialized) {
+        await videoDB.init();
+        videoDB.startPeriodicSync();
       }
+
+      allVideos = videoDB.getAllVideos();
+
+      if (allVideos.length === 0) {
+        const res = await fetch("videos.json");
+        const jsonData = await res.json();
+        await videoDB.importFromJSON(jsonData);
+        allVideos = videoDB.getAllVideos();
+      }
+
+      if (videoName) {
+        currentVideoIndex = allVideos.findIndex(v => v.name === decodeURIComponent(videoName));
+        if (currentVideoIndex === -1) {
+          // Fallback to first video if not found
+          currentVideoIndex = 0;
+        }
+      } else {
+        // Fallback to first video if no param
+        currentVideoIndex = 0;
+      }
+      
+      currentVideo = allVideos[currentVideoIndex];
+      displayCurrentVideo();
+      displayRelatedVideos();
     }
 
     // Display the current video

@@ -37,8 +37,7 @@
         
         <div id="video-container"></div>
       </main>
-      <div data-banner-id="1464711"></div>
-    </div>
+f    </div>
   </div>
   <script>
     let allVideos = [];
@@ -195,12 +194,8 @@
     
     // Function to open video in new page
     function openVideo(index) {
-      // Store current video index and videos data in sessionStorage
-      sessionStorage.setItem('currentVideoIndex', index);
-      sessionStorage.setItem('videosData', JSON.stringify(allVideos));
-      
-      // Open video player page
-      window.open('watch.html', '_blank');
+      const videoId = encodeURIComponent(allVideos[index].name);
+      window.location.href = `watch.html?video=${videoId}`;
     }
 
     function filterVideos(tag) {
