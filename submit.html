@@ -91,10 +91,10 @@
         id: Date.now().toString()
       };
 
-      // Save to localStorage
-      const submissions = JSON.parse(localStorage.getItem('videoSubmissions') || '[]');
-      submissions.push(submission);
-      localStorage.setItem('videoSubmissions', JSON.stringify(submissions));
+      // Save to localStorage is disabled.
+      // const submissions = JSON.parse(localStorage.getItem('videoSubmissions') || '[]');
+      // submissions.push(submission);
+      // localStorage.setItem('videoSubmissions', JSON.stringify(submissions));
 
       // Clear form
       document.getElementById('submission-form').reset();

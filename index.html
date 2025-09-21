@@ -38,6 +38,7 @@
         <div id="video-container"></div>
       </main>
     </div>
+    <div data-banner-id="1464711"></div>
   </div>
   <script>
     let allVideos = [];
@@ -109,47 +110,27 @@
           if (!initSuccess) {
             throw new Error('Failed to initialize database');
           }
-          
-          // Try to load from database first
-          let videos = videoDB.getAllVideos();
-          let tags = videoDB.getAllTags();
-          
-          // If no data in database, load from JSON and import
-          if (videos.length === 0) {
-            console.log('No data in database, importing from JSON...');
-            const res = await fetch("videos.json");
-            const jsonData = await res.json();
-            await videoDB.importFromJSON(jsonData);
-            
-            videos = videoDB.getAllVideos();
-            tags = videoDB.getAllTags();
-          }
-          
-          allVideos = videos;
-          buildNavbar(tags);
-          displayVideos(videos);
-        } else {
-          // Database already initialized, just load data
-          const videos = videoDB.getAllVideos();
-          const tags = videoDB.getAllTags();
-          
-          allVideos = videos;
-          buildNavbar(tags);
-          displayVideos(videos);
         }
+        
+        // Always fetch from videos.json on page load
+        console.log('Fetching latest videos from videos.json...');
+        const res = await fetch("videos.json");
+        const jsonData = await res.json();
+        
+        // Import data into the database
+        await videoDB.importFromJSON(jsonData);
+        
+        // Load videos and tags from the database
+        const videos = videoDB.getAllVideos();
+        const tags = videoDB.getAllTags();
+        
+        allVideos = videos;
+        buildNavbar(tags);
+        displayVideos(videos);
+
       } catch (error) {
         console.error('Error loading videos:', error);
-        // Fallback to JSON file
-        try {
-          const res = await fetch("videos.json");
-          const data = await res.json();
-          allVideos = data.videos;
-          buildNavbar(data.tags);
-          displayVideos(data.videos);
-        } catch (fallbackError) {
-          console.error('Fallback also failed:', fallbackError);
-          document.getElementById("video-container").innerHTML = '<p>Error loading videos. Please try again later.</p>';
-        }
+        document.getElementById("video-container").innerHTML = '<p>Error loading videos. Please try again later.</p>';
       }
     }
     

@@ -26,18 +26,10 @@ class VideoDatabase {
             const SQL = await this.loadSQLJS();
             console.log('SQL.js loaded successfully');
             
-            // Try to load existing database from localStorage
-            const savedDB = localStorage.getItem('videoDB');
-            if (savedDB) {
-                const uint8Array = new Uint8Array(JSON.parse(savedDB));
-                this.db = new SQL.Database(uint8Array);
-                console.log('Loaded existing database from localStorage');
-            } else {
-                // Create new database
-                this.db = new SQL.Database();
-                this.createTables();
-                console.log('Created new database');
-            }
+            // Create new database
+            this.db = new SQL.Database();
+            this.createTables();
+            console.log('Created new database');
             
             // Load GitHub configuration from database
             this.loadGitHubConfig();
@@ -133,11 +125,7 @@ class VideoDatabase {
      * Save database to localStorage
      */
     saveToStorage() {
-        if (!this.db) return;
-        
-        const data = this.db.export();
-        const array = Array.from(data);
-        localStorage.setItem('videoDB', JSON.stringify(array));
+        // localStorage caching is disabled.
     }
 
     /**
