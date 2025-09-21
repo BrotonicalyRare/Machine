@@ -97,6 +97,11 @@
       videoDB = new VideoDatabase();
       await videoDB.init();
       
+      // Start periodic sync
+      if (videoDB.isInitialized) {
+        videoDB.startPeriodicSync();
+      }
+      
       // Load GitHub configuration
       loadGitHubConfig();
       
@@ -109,7 +114,7 @@
 
     // Load and display video submissions
     function loadSubmissions() {
-      const submissions = []; // Submissions are not stored in localStorage anymore
+      const submissions = JSON.parse(localStorage.getItem('videoSubmissions') || '[]');
       const container = document.getElementById('submissions-list');
       const countBadge = document.getElementById('submission-count');
       
@@ -154,12 +159,62 @@
 
     // Approve submission - add to videos
     async function approveSubmission(index) {
-      // This function is now disabled as submissions are not stored in localStorage.
+      const submissions = JSON.parse(localStorage.getItem('videoSubmissions') || '[]');
+      const submission = submissions[index];
+      
+      if (!submission) return;
+      
+      // Convert submission to video format
+      let embedSrc = submission.url;
+      if (submission.url.includes('youtube.com/watch?v=')) {
+        const videoId = submission.url.split('v=')[1].split('&')[0];
+        embedSrc = `https://www.youtube.com/embed/${videoId}`;
+      } else if (submission.url.includes('youtu.be/')) {
+        const videoId = submission.url.split('youtu.be/')[1].split('?')[0];
+        embedSrc = `https://www.youtube.com/embed/${videoId}`;
+      }
+      
+      try {
+        if (videoDB && videoDB.isInitialized) {
+          // Add to database
+          const success = videoDB.addVideo(
+            submission.title,
+            submission.description,
+            submission.category,
+            embedSrc,
+            submission.thumbnail || null
+          );
+          
+          if (success) {
+            // Remove from submissions
+            submissions.splice(index, 1);
+            localStorage.setItem('videoSubmissions', JSON.stringify(submissions));
+            
+            setStatus('Submission approved and video added!');
+            await loadVideos();
+            loadSubmissions();
+          } else {
+            setStatus('Failed to approve submission');
+          }
+        } else {
+          setStatus('Database not available');
+        }
+      } catch (error) {
+        console.error('Error approving submission:', error);
+        setStatus('Error approving submission');
+      }
     }
 
     // Reject submission - remove from list
     function rejectSubmission(index) {
-      // This function is now disabled as submissions are not stored in localStorage.
+      if (!confirm('Are you sure you want to reject this submission?')) return;
+      
+      const submissions = JSON.parse(localStorage.getItem('videoSubmissions') || '[]');
+      submissions.splice(index, 1);
+      localStorage.setItem('videoSubmissions', JSON.stringify(submissions));
+      
+      setStatus('Submission rejected and removed');
+      loadSubmissions();
     }
 
     // Load GitHub configuration into form
@@ -304,14 +359,6 @@
     async function loadVideos() {
       try {
         if (videoDB && videoDB.isInitialized) {
-          // Always fetch from videos.json on page load
-          console.log('Fetching latest videos from videos.json...');
-          const res = await fetch("videos.json");
-          const jsonData = await res.json();
-          
-          // Import data into the database
-          await videoDB.importFromJSON(jsonData);
-
           // Load from database
           const videos = videoDB.getAllVideos();
           videosData.videos = videos;

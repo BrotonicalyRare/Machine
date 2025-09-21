@@ -85,6 +85,11 @@
             await videoDB.init();
           }
           
+          // Start periodic sync
+          if (videoDB.isInitialized) {
+            videoDB.startPeriodicSync();
+          }
+          
           allVideos = videoDB.getAllVideos();
           console.log('All videos from database:', allVideos);
           

@@ -26,10 +26,18 @@ class VideoDatabase {
             const SQL = await this.loadSQLJS();
             console.log('SQL.js loaded successfully');
             
-            // Create new database
-            this.db = new SQL.Database();
-            this.createTables();
-            console.log('Created new database');
+            // Try to load existing database from localStorage
+            const savedDB = localStorage.getItem('videoDB');
+            if (savedDB) {
+                const uint8Array = new Uint8Array(JSON.parse(savedDB));
+                this.db = new SQL.Database(uint8Array);
+                console.log('Loaded existing database from localStorage');
+            } else {
+                // Create new database
+                this.db = new SQL.Database();
+                this.createTables();
+                console.log('Created new database');
+            }
             
             // Load GitHub configuration from database
             this.loadGitHubConfig();
@@ -125,7 +133,11 @@ class VideoDatabase {
      * Save database to localStorage
      */
     saveToStorage() {
-        // localStorage caching is disabled.
+        if (!this.db) return;
+        
+        const data = this.db.export();
+        const array = Array.from(data);
+        localStorage.setItem('videoDB', JSON.stringify(array));
     }
 
     /**
@@ -629,6 +641,22 @@ class VideoDatabase {
         
         // Default placeholder for other video types
         return 'https://via.placeholder.com/320x180/1976d2/white?text=Video+Thumbnail';
+   }
+
+    /**
+     * Periodically sync with GitHub
+     */
+    startPeriodicSync() {
+        console.log('Starting periodic sync with GitHub every 2 minutes');
+        
+        // Run once immediately
+        this.syncWithGitHub();
+        
+        // Then run every 2 minutes
+        setInterval(() => {
+            console.log('Performing periodic sync with GitHub');
+            this.syncWithGitHub();
+        }, 2 * 60 * 1000); // 2 minutes in milliseconds
     }
 }
 
