@@ -485,6 +485,7 @@ class VideoDatabase {
                 tags: tags
             };
 
+            console.log('Data to be synced with GitHub:', JSON.stringify(jsonData, null, 2));
             await this.updateGitHubFile('videos.json', JSON.stringify(jsonData, null, 2));
             console.log('Synced with GitHub successfully');
             return true;
