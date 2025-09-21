@@ -55,6 +55,7 @@
     </div>
     <button onclick="saveGitHubConfig()" style="background: #28a745; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;">Save Configuration</button>
     <button onclick="testGitHubConnection()" style="background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin-left: 10px;">Test Connection</button>
+    <button onclick="syncWithGitHub()" style="background: #ff9800; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin-left: 10px;">Sync with GitHub</button>
   </div>
 
   <div style="margin-top: 20px; text-align: center;">
@@ -319,6 +320,33 @@
       } catch (error) {
         console.error('Error during testGitHubConnection:', error);
         setStatus('Error testing GitHub connection: ' + error.message);
+      }
+    }
+
+    // Sync with GitHub manually
+    async function syncWithGitHub() {
+      console.log('Manual sync with GitHub requested');
+      
+      if (!videoDB || !videoDB.githubConfig || !videoDB.githubConfig.token) {
+        alert('Please save GitHub configuration first');
+        return;
+      }
+      
+      setStatus('Syncing with GitHub...');
+      console.log('Calling videoDB.syncWithGitHub()');
+      
+      try {
+        const success = await videoDB.syncWithGitHub();
+        console.log('Sync result:', success);
+        
+        if (success) {
+          setStatus('Successfully synced with GitHub!');
+        } else {
+          setStatus('Failed to sync with GitHub. Check your configuration.');
+        }
+      } catch (error) {
+        console.error('Error during GitHub sync:', error);
+        setStatus('Error syncing with GitHub: ' + error.message);
       }
     }
 

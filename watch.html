@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="referrer" content="same-origin">
   <title>Watch Video - Video Tube</title>
   <link rel="stylesheet" href="style.css">
   <script src="database.js"></script>
@@ -16,7 +17,7 @@
     <!-- Video Player Section -->
     <div class="video-player-section">
       <div class="video-player">
-        <iframe id="video-iframe" src="" frameborder="0" allowfullscreen></iframe>
+        <iframe id="video-iframe" src="" frameborder="0" allowfullscreen referrerpolicy="same-origin"></iframe>
       </div>
       
       <div class="video-details">
@@ -60,8 +61,11 @@
 
     // Load video data from sessionStorage or database
     async function loadVideoData() {
+      console.log('loadVideoData called');
       const videoIndex = sessionStorage.getItem('currentVideoIndex');
       let videosData = sessionStorage.getItem('videosData');
+      
+      console.log('Session data:', { videoIndex, videosData: videosData ? 'exists' : 'null' });
       
       if (videoIndex !== null && videosData) {
         // Use session data first
@@ -69,22 +73,28 @@
         allVideos = JSON.parse(videosData);
         currentVideo = allVideos[currentVideoIndex];
         
+        console.log('Using session data, video:', currentVideo);
         displayCurrentVideo();
         displayRelatedVideos();
       } else {
         // Try to load from database
         try {
+          console.log('Loading from database...');
           if (!videoDB.isInitialized) {
             await videoDB.init();
           }
           
           allVideos = videoDB.getAllVideos();
+          console.log('All videos from database:', allVideos);
+          
           if (allVideos.length > 0) {
             currentVideoIndex = 0;
             currentVideo = allVideos[0];
+            console.log('Using first video from database:', currentVideo);
             displayCurrentVideo();
             displayRelatedVideos();
           } else {
+            console.log('No videos found, redirecting to index');
             // Fallback to redirect
             window.location.href = 'index.html';
           }
@@ -99,13 +109,171 @@
     function displayCurrentVideo() {
       if (!currentVideo) return;
       
-      document.getElementById('video-iframe').src = currentVideo.src;
-      document.getElementById('video-title').textContent = currentVideo.name;
-      document.getElementById('video-description').textContent = currentVideo.desc;
-      document.getElementById('video-tag').textContent = currentVideo.tag;
+      // Handle different video sources with proper referer settings
+      const videoIframe = document.getElementById('video-iframe');
+      
+      // For YouTube videos, use embed URL with proper parameters
+      if (isYouTubeVideo(currentVideo.src)) {
+        const videoId = getYouTubeVideoId(currentVideo.src);
+        if (videoId) {
+          videoIframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=0&rel=0&modestbranding=1`;
+        }
+      } 
+        // For other video sources that might have referer restrictions
+        else {
+          // Check if it's a direct video file that needs special handling
+          if (currentVideo.src.includes('.mp4') || currentVideo.src.includes('.webm') || currentVideo.src.includes('.avi') || currentVideo.src.includes('gayporntube.com')) {
+            // Create a video element instead of iframe for direct video files
+            createVideoPlayer(currentVideo.src);
+            // Don't return early - we still need to load video details below
+          } else {
+            // Set referrer policy to same-origin for consistency
+            videoIframe.referrerPolicy = "same-origin";
+            
+            // Try to extract domain from video URL to set appropriate referer
+            try {
+              const videoUrl = new URL(currentVideo.src);
+              const videoDomain = videoUrl.origin;
+              
+              // For external video sources, create a proxy-like approach
+              if (currentVideo.src.includes('embed') || currentVideo.src.includes('iframe')) {
+                videoIframe.src = currentVideo.src;
+              } else {
+                // Convert direct video links to embed format if possible
+                videoIframe.src = currentVideo.src;
+              }
+            } catch (error) {
+              // Fallback to direct URL
+              videoIframe.src = currentVideo.src;
+            }
+          }
+        }
+      
+      // Always load video details regardless of player type
+      console.log('Setting video details:', {
+        name: currentVideo.name,
+        desc: currentVideo.desc,
+        tag: currentVideo.tag
+      });
+      
+      const titleElement = document.getElementById('video-title');
+      const descElement = document.getElementById('video-description');
+      const tagElement = document.getElementById('video-tag');
+      
+      console.log('Elements found:', {
+        title: titleElement ? 'exists' : 'null',
+        desc: descElement ? 'exists' : 'null', 
+        tag: tagElement ? 'exists' : 'null'
+      });
+      
+      if (titleElement) titleElement.textContent = currentVideo.name;
+      if (descElement) descElement.textContent = currentVideo.desc;
+      if (tagElement) tagElement.textContent = currentVideo.tag;
       
       // Update page title
       document.title = `${currentVideo.name} - Video Tube`;
+    }
+
+    // Check if URL is YouTube video
+    function isYouTubeVideo(url) {
+      return url.includes('youtube.com') || url.includes('youtu.be');
+    }
+
+    // Create a native video player for direct video files
+    function createVideoPlayer(videoSrc) {
+      const videoContainer = document.querySelector('.video-player');
+      
+      // For gayporntube and similar sites, we need to simulate the redirect chain
+      if (videoSrc.includes('gayporntube.com') || videoSrc.includes('.mp4')) {
+        // Start with Method 1 as default
+        videoContainer.innerHTML = `
+          <div style="text-align: center; padding: 20px;">
+            <p>Loading video...</p>
+            <div id="video-container" style="height: 400px; border: 1px solid #ccc; position: relative;">
+              <iframe id="video-frame" 
+                      src="about:blank" 
+                      frameborder="0" 
+                      allowfullscreen 
+                      sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+                      style="width: 100%; height: 100%;">
+              </iframe>
+            </div>
+            <br>
+            <button onclick="createProxyPage('${videoSrc}')" style="background: #ff9800; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin: 5px;">
+              Try Alternative Method
+            </button>
+            <button onclick="openInPopup('${videoSrc}')" style="background: #9c27b0; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin: 5px;">
+              Open in Popup
+            </button>
+          </div>
+        `;
+        
+        // Automatically load with Method 1
+        setTimeout(() => loadVideoWithProperHeaders(videoSrc), 500);
+      } else {
+        // For other video types, use simple iframe
+        videoContainer.innerHTML = `
+          <iframe src="${videoSrc}" frameborder="0" allowfullscreen referrerpolicy="no-referrer" style="width: 100%; height: 100%;"></iframe>
+        `;
+      }
+    }
+
+    // Method 1: Try to load with proper headers simulation
+    function loadVideoWithProperHeaders(videoSrc) {
+      const iframe = document.getElementById('video-frame');
+      
+      // Create HTML content that mimics the browser behavior
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="referrer" content="same-origin">
+          <style>
+            body { margin: 0; padding: 0; background: black; }
+            video { width: 100%; height: 100vh; }
+          </style>
+        </head>
+        <body>
+          <video controls autoplay>
+            <source src="${videoSrc}" type="video/mp4">
+            <p style="color: white; text-align: center; margin-top: 50px;">
+              Video cannot be loaded due to CORS restrictions.
+            </p>
+          </video>
+        </body>
+        </html>
+      `;
+      
+      iframe.src = 'data:text/html;charset=utf-8,' + encodeURIComponent(htmlContent);
+    }
+
+    // Method 2: Create a proxy-like page
+    function createProxyPage(videoSrc) {
+      const iframe = document.getElementById('video-frame');
+      
+      // Try using the actual video URL directly with different sandbox settings
+      iframe.sandbox = "allow-scripts allow-same-origin allow-popups allow-forms allow-top-navigation";
+      iframe.src = videoSrc;
+      
+      // Fallback after 5 seconds if it doesn't load
+      setTimeout(() => {
+        console.log('Trying fallback method...');
+        loadVideoWithProperHeaders(videoSrc);
+      }, 5000);
+    }
+
+    // Method 3: Open in popup with proper settings
+    function openInPopup(videoSrc) {
+      const popup = window.open(
+        videoSrc,
+        'video-player',
+        'width=800,height=600,scrollbars=yes,resizable=yes,toolbar=no,menubar=no,location=no,status=no'
+      );
+      
+      if (!popup) {
+        alert('Popup blocked. Please allow popups for this site or use "Open in New Tab".');
+      }
     }
 
     // Display related videos (same tag or random if not enough)

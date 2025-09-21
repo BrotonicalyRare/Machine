@@ -316,6 +316,44 @@ class VideoDatabase {
     }
 
     /**
+     * Delete video by name and src (for admin interface)
+     */
+    deleteVideo(name, src) {
+        if (!this.isInitialized) return false;
+
+        try {
+            console.log('deleteVideo called with:', { name, src });
+            
+            // Find and delete video by name and src
+            const deleteStmt = this.db.prepare('DELETE FROM videos WHERE name = ? AND src = ?');
+            deleteStmt.run([name, src]);
+            deleteStmt.free();
+
+            // Get number of affected rows from the database object
+            const changes = this.db.getRowsModified();
+            console.log('Delete operation affected rows:', changes);
+
+            if (changes > 0) {
+                // Update tag counts
+                this.updateTagCounts();
+                this.saveToStorage();
+                
+                // Trigger sync with GitHub if configured
+                this.syncWithGitHub();
+                
+                console.log('Video deleted successfully');
+                return true;
+            } else {
+                console.log('No video found with matching name and src');
+                return false;
+            }
+        } catch (error) {
+            console.error('Failed to delete video:', error);
+            return false;
+        }
+    }
+
+    /**
      * Update tag count
      */
     updateTagCount(tagName) {
@@ -341,6 +379,35 @@ class VideoDatabase {
             const deleteStmt = this.db.prepare('DELETE FROM tags WHERE name = ?');
             deleteStmt.run([tagName]);
             deleteStmt.free();
+        }
+    }
+
+    /**
+     * Update all tag counts (for cleanup after deletions)
+     */
+    updateTagCounts() {
+        try {
+            // Get all unique tags from videos
+            const tagsStmt = this.db.prepare('SELECT DISTINCT tag FROM videos');
+            const activeTags = [];
+            
+            while (tagsStmt.step()) {
+                const row = tagsStmt.getAsObject();
+                activeTags.push(row.tag);
+            }
+            tagsStmt.free();
+
+            // Clear all tags
+            this.db.run('DELETE FROM tags');
+
+            // Recalculate counts for active tags
+            activeTags.forEach(tag => {
+                this.updateTagCount(tag);
+            });
+
+            console.log('Updated tag counts for:', activeTags);
+        } catch (error) {
+            console.error('Failed to update tag counts:', error);
         }
     }
 

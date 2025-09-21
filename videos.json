@@ -1,66 +1,40 @@
 {
   "videos": [
     {
-      "name": "BJ#1",
-      "desc": "cute boy getting a bj",
-      "tag": "bj",
-      "src": "https://media-2-videos.gayporntube.com/remote_control.php?file=B64YTo0OntzOjQ6InRpbWUiO2k6MTc1ODM4NjYyOTtzOjU6ImxpbWl0IjtpOjA7czo0OiJmaWxlIjtzOjQ0OiIvY29udGVudHMvdmlkZW9zLzE4MDcwMDAvMTgwNzcyMC8xODA3NzIwLm1wNCI7czoyOiJjdiI7czozMjoiYjFmYmQzNDVmYWJkOTZlNTMxMzhiYjk5YWYzNmFkOWEiO30%3D"
-    },
-    {
-      "name": "BJ#1",
-      "desc": "cute boy getting a bj",
-      "tag": "bj",
-      "src": "https://www.gayporntube.com/get_file/3/0c3c4408da64f5b40fa43b5bfd55bcbc/1807000/1807720/1807720.mp4/?br=326"
-    },
-    {
-      "name": "BJ#1",
-      "desc": "Cute boy getting BJ",
-      "tag": "bj",
-      "src": "https://www.gayporntube.com/get_file/3/0c3c4408da64f5b40fa43b5bfd55bcbc/1807000/1807720/1807720.mp4"
-    },
-    {
-      "name": "BJ#1",
-      "desc": "cute boy getting BJ",
-      "tag": "bj",
-      "src": "https://www.gayporntube.com/get_file/3/0c3c4408da64f5b40fa43b5bfd55bcbc/1807000/1807720/1807720.mp4"
-    },
-    {
       "name": "Sample Boxing Video",
       "desc": "A great boxing match",
       "tag": "boxing",
-      "src": "https://www.youtube.com/embed/dQw4w9WgXcQ"
+      "src": "https://www.youtube.com/embed/dQw4w9WgXcQ",
+      "thumbnail": null
     },
     {
       "name": "Cooking Tutorial",
       "desc": "Learn to cook pasta",
       "tag": "cooking",
-      "src": "https://www.youtube.com/embed/dQw4w9WgXcQ"
+      "src": "https://www.youtube.com/embed/dQw4w9WgXcQ",
+      "thumbnail": null
     },
     {
       "name": "Football Highlights",
       "desc": "Best goals of the season",
       "tag": "sports",
-      "src": "https://www.youtube.com/embed/dQw4w9WgXcQ"
+      "src": "https://www.youtube.com/embed/dQw4w9WgXcQ",
+      "thumbnail": null
     },
     {
       "name": "Political Debate",
       "desc": "Important political discussion",
       "tag": "politics",
-      "src": "https://www.youtube.com/embed/dQw4w9WgXcQ"
+      "src": "https://www.youtube.com/embed/dQw4w9WgXcQ",
+      "thumbnail": null
     },
     {
       "name": "Daily Vlog",
       "desc": "My day in the life",
       "tag": "vlogs",
-      "src": "https://www.youtube.com/embed/dQw4w9WgXcQ"
+      "src": "https://www.youtube.com/embed/dQw4w9WgXcQ",
+      "thumbnail": null
     }
   ],
-  "tags": [
-    "bj",
-    "boxing",
-    "cooking",
-    "politics",
-    "sports",
-    "vlogs"
-  ]
+  "tags": ["boxing", "cooking", "politics", "sports", "vlogs"]
 }

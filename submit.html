@@ -83,8 +83,8 @@
       const submission = {
         submitterName: document.getElementById('submission-name').value.trim() || 'Anonymous',
         title: title,
-        description: document.getElementById('submission-desc').value.trim() || 'No description provided',
-        category: document.getElementById('submission-tag').value.trim().toLowerCase() || 'general',
+        description: (document.getElementById('submission-desc')?.value.trim()) || 'No description provided',
+        category: (document.getElementById('submission-tag')?.value.trim().toLowerCase()) || 'general',
         url: url,
         thumbnail: '', // No thumbnail field in simplified form
         submittedAt: new Date().toISOString(),
