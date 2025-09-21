@@ -1,13 +1,6 @@
 {
   "videos": [
     {
-      "name": "Cooking Tutorial",
-      "desc": "Learn to cook pasta",
-      "tag": "cooking",
-      "src": "https://www.youtube.com/embed/dQw4w9WgXcQ",
-      "thumbnail": "https://img.youtube.com/vi/dQw4w9WgXcQ/mqdefault.jpg"
-    },
-    {
       "name": "Football Highlights",
       "desc": "Best goals of the season",
       "tag": "sports",
@@ -30,7 +23,6 @@
     }
   ],
   "tags": [
-    "cooking",
     "politics",
     "sports",
     "vlogs"
