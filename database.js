@@ -7,6 +7,7 @@ class VideoDatabase {
         console.log('VideoDatabase constructor called');
         this.db = null;
         this.isInitialized = false;
+        this.hasChanges = false; // Track changes for syncing
         this.githubConfig = {
             owner: null,
             repo: null,
@@ -264,6 +265,7 @@ class VideoDatabase {
             // Update tag count
             this.updateTagCount(tag);
             
+            this.hasChanges = true; // Mark that there are changes
             this.saveToStorage();
             
             // Trigger sync with GitHub if configured
@@ -303,6 +305,7 @@ class VideoDatabase {
                 this.updateTagCount(tag);
             }
 
+            this.hasChanges = true; // Mark that there are changes
             this.saveToStorage();
             
             // Trigger sync with GitHub if configured
@@ -465,6 +468,11 @@ class VideoDatabase {
      * Sync with GitHub repository
      */
     async syncWithGitHub() {
+        if (!this.hasChanges) {
+            console.log('No changes to sync with GitHub');
+            return false;
+        }
+
         if (!this.githubConfig.owner || !this.githubConfig.repo || !this.githubConfig.token) {
             console.log('GitHub not configured, skipping sync');
             return false;
@@ -487,6 +495,8 @@ class VideoDatabase {
 
             console.log('Data to be synced with GitHub:', JSON.stringify(jsonData, null, 2));
             await this.updateGitHubFile('videos.json', JSON.stringify(jsonData, null, 2));
+            
+            this.hasChanges = false; // Reset changes flag after successful sync
             console.log('Synced with GitHub successfully');
             return true;
         } catch (error) {
